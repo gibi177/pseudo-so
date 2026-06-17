@@ -1,0 +1,11 @@
+#!/bin/bash
+# Wrapper para executar o pseudo-SO conforme a especificacao
+
+# Verifica se a pasta out existe e se a classe foi compilada
+if [ ! -d "out" ]; then
+  echo "Erro: O projeto ainda não foi compilado. Rode 'make' ou './build.sh' primeiro."
+  exit 1
+fi
+
+# Repassa todos os argumentos passados via terminal ("$@") diretamente para a classe Java
+java -cp out Dispatcher "$@"
