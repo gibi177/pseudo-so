@@ -1,6 +1,9 @@
 package util;
 
 import processos.ProcessControlBlock;
+import modulos.GerenciadorArquivos;
+import arquivos.OperacaoArquivo;
+import arquivos.TipoOperacao;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -93,5 +96,70 @@ public class LeitorEntrada {
         }
 
         return pcbs;
+    }
+
+    /**
+     * Lê o arquivo files.txt, extrai a ocupação inicial do disco e as operações pendentes.
+     */
+    public static void carregarSistemaArquivos(String caminhoArquivos, GerenciadorArquivos gerenciador) throws IOException {
+        List<String> linhas = Files.readAllLines(Path.of(caminhoArquivos));
+        
+        if (linhas.isEmpty()) {
+            throw new IllegalArgumentException("O arquivo files.txt está vazio.");
+        }
+
+        // Linha 1: Tamanho do disco
+        int totalBlocos = Integer.parseInt(linhas.get(0).trim());
+        gerenciador.inicializarDisco(totalBlocos);
+
+        // Linha 2: Quantidade de segmentos (arquivos pré-existentes)
+        int qtdSegmentos = Integer.parseInt(linhas.get(1).trim());
+
+        // Linhas 3 até (qtdSegmentos + 2): Estado inicial do disco
+        int linhaAtual = 2;
+        for (int i = 0; i < qtdSegmentos; i++) {
+            String[] dadosSegmento = linhas.get(linhaAtual).split(",");
+            String nome = dadosSegmento[0].trim();
+            int blocoInicial = Integer.parseInt(dadosSegmento[1].trim());
+            int tamanho = Integer.parseInt(dadosSegmento[2].trim());
+            
+            // Usando a constante explícita em vez do Magic Number -1
+            gerenciador.registrarBlocoOcupadoInicial(nome, blocoInicial, tamanho, GerenciadorArquivos.AUTORIA_SISTEMA);
+            linhaAtual++;
+        }
+
+        // A partir da linha (qtdSegmentos + 2): Operações
+        List<OperacaoArquivo> operacoes = new ArrayList<>();
+        while (linhaAtual < linhas.size()) {
+            String linhaStr = linhas.get(linhaAtual).trim();
+            if (linhaStr.isEmpty()) {
+                linhaAtual++;
+                continue;
+            }
+
+            String[] dadosOperacao = linhaStr.split(",");
+            int idProcesso = Integer.parseInt(dadosOperacao[0].trim());
+            int codigoOp = Integer.parseInt(dadosOperacao[1].trim());
+            
+            // Traduz o inteiro 0 ou 1 para a Entidade de Domínio
+            TipoOperacao tipoOperacao = TipoOperacao.fromCodigo(codigoOp);
+            
+            String nomeArq = dadosOperacao[2].trim();
+            int tamBlocos = 0;
+            
+            // Fail-fast para tamanho ausente na operação de criar
+            if (tipoOperacao == TipoOperacao.CRIAR) {
+                if (dadosOperacao.length < 4) {
+                    throw new IllegalArgumentException("Erro na linha " + (linhaAtual + 1) + 
+                        ": Operacao de criacao sem tamanho definido para o arquivo " + nomeArq);
+                }
+                tamBlocos = Integer.parseInt(dadosOperacao[3].trim());
+            }
+
+            operacoes.add(new OperacaoArquivo(idProcesso, tipoOperacao, nomeArq, tamBlocos));
+            linhaAtual++;
+        }
+
+        gerenciador.carregarFilaOperacoes(operacoes);
     }
 }

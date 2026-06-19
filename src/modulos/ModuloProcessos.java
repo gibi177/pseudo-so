@@ -36,6 +36,19 @@ public class ModuloProcessos {
     }
 
     /**
+     * Busca um processo carregado pelo seu ID.
+     * Retorna null se o processo não existir no domínio, permitindo validação segura.
+     */
+    public ProcessControlBlock getProcessoPorId(int idProcurado) {
+        for (ProcessControlBlock pcb : processosCarregados) {
+            if (pcb.getId() == idProcurado) {
+                return pcb;
+            }
+        }
+        return null; // Retorno null é esperado e tratado pelo Despachante
+    }
+
+    /**
      * Retorna a quantidade total de processos lidos.
      */
     public int getTotalProcessos() {

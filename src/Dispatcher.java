@@ -43,11 +43,18 @@ public class Dispatcher {
         System.out.println("Pseudo-SO inicializado. Módulos carregados com sucesso.");
 
         try {
+            // Processos e Memória
             List<ProcessControlBlock> pcbsLidos = LeitorEntrada.carregarProcessos(caminhoProcessos, caminhoStrings);
             processos.carregarTodos(pcbsLidos);
             System.out.println("Sucesso: " + processos.getTotalProcessos() + " processos carregados na memória de controle.");
+
+            // Sistema de Arquivos
+            LeitorEntrada.carregarSistemaArquivos(caminhoArquivos, arquivos);
+            System.out.println("Sucesso: Sistema de arquivos estruturado e fila de disco criada.");
+            
         } catch (Exception e) {
             System.err.println("Erro ao processar os arquivos de texto: " + e.getMessage());
+            e.printStackTrace(); // Útil para depurar formatação na Fase 2
             System.exit(1);
         }
     }
