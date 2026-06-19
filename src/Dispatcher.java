@@ -1,3 +1,9 @@
+import modulos.ModuloProcessos;
+import modulos.GerenciadorFilas;
+import modulos.GerenciadorMemoria;
+import modulos.GerenciadorRecursos;
+import modulos.GerenciadorArquivos;
+
 import java.io.File;
 
 /**
@@ -24,15 +30,14 @@ public class Dispatcher {
             System.exit(1);
         }
 
-        // TODO: Instanciar os cinco gerenciadores aqui (Etapa 3 do seu plano)
-        // moduloProcessos processos = new ModuloProcessos();
-        // gerenciadorFilas filas = new GerenciadorFilas();
-        // gerenciadorMemoria memoria = new GerenciadorMemoria();
-        // gerenciadorRecursos recursos = new GerenciadorRecursos();
-        // gerenciadorArquivos arquivos = new GerenciadorArquivos();
+        // Instanciação e amarração da arquitetura (Fase 1 finalizada)
+        ModuloProcessos processos = new ModuloProcessos();
+        GerenciadorFilas filas = new GerenciadorFilas();
+        GerenciadorMemoria memoria = new GerenciadorMemoria();
+        GerenciadorRecursos recursos = new GerenciadorRecursos();
+        GerenciadorArquivos arquivos = new GerenciadorArquivos();
 
-        System.out.println("Pseudo-SO inicializado. Compilacao e setup base funcionando.");
-        System.out.println("Arquivos validados com sucesso.");
+        System.out.println("Pseudo-SO inicializado. Módulos carregados com sucesso.");
     }
 
     /**
