@@ -3,8 +3,11 @@ import modulos.GerenciadorFilas;
 import modulos.GerenciadorMemoria;
 import modulos.GerenciadorRecursos;
 import modulos.GerenciadorArquivos;
+import processos.ProcessControlBlock;
+import util.LeitorEntrada;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * Classe principal responsável por despachar e inicializar o pseudo-SO.
@@ -38,6 +41,15 @@ public class Dispatcher {
         GerenciadorArquivos arquivos = new GerenciadorArquivos();
 
         System.out.println("Pseudo-SO inicializado. Módulos carregados com sucesso.");
+
+        try {
+            List<ProcessControlBlock> pcbsLidos = LeitorEntrada.carregarProcessos(caminhoProcessos, caminhoStrings);
+            processos.carregarTodos(pcbsLidos);
+            System.out.println("Sucesso: " + processos.getTotalProcessos() + " processos carregados na memória de controle.");
+        } catch (Exception e) {
+            System.err.println("Erro ao processar os arquivos de texto: " + e.getMessage());
+            System.exit(1);
+        }
     }
 
     /**
