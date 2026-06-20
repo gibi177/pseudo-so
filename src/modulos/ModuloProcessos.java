@@ -27,12 +27,29 @@ public class ModuloProcessos {
     }
 
     /**
-     * Retorna apenas os processos cujo tempo de inicialização coincide com o relógio (tick) atual.
+     * Retorna a lista de processos cujo tempo de inicialização coincide com o tempo atual do relógio.
      */
     public List<ProcessControlBlock> getProcessosPorTempo(int tempoAtual) {
-        return processosCarregados.stream()
-                .filter(p -> p.getTempoInicializacao() == tempoAtual)
-                .collect(Collectors.toList());
+        List<ProcessControlBlock> processosChegando = new ArrayList<>();
+        for (ProcessControlBlock pcb : processosCarregados) {
+            if (pcb.getTempoInicializacao() == tempoAtual) {
+                processosChegando.add(pcb);
+            }
+        }
+        return processosChegando;
+    }
+
+    /**
+     * Verifica se todos os processos carregados já consumiram todo o seu tempo de CPU.
+     * Condição de parada para o loop principal do Despachante.
+     */
+    public boolean isTodosConcluidos() {
+        for (ProcessControlBlock pcb : processosCarregados) {
+            if (!pcb.isConcluido()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

@@ -29,6 +29,7 @@ public class ProcessControlBlock {
     private int prioridadeAtual; // Manipulada pelo escalonador (aging/realimentação)
     private int pageFaults;
     private int tempoExecutado; // Quantidade de ciclos de CPU já consumidos
+    private int tempoEsperando; // Rastreia starvation: tempo contínuo aguardando na fila
 
     // --- Rastreamento de Referências de Memória (lidos do arquivo string.txt) ---
     private List<Integer> referenciasMemoria;
@@ -59,6 +60,8 @@ public class ProcessControlBlock {
         
         this.referenciasMemoria = new ArrayList<>();
         this.programCounterMemoria = 0;
+
+        this.tempoEsperando = 0;
     }
 
     // --- Getters ---
@@ -72,6 +75,7 @@ public class ProcessControlBlock {
     public int getRequisicaoScanner() { return requisicaoScanner; }
     public int getRequisicaoModem() { return requisicaoModem; }
     public int getRequisicaoDiscoSata() { return requisicaoDiscoSata; }
+    public int getTempoEsperando() { return tempoEsperando; }
     
     public EstadoProcesso getEstadoAtual() { return estadoAtual; }
     public int getPrioridadeAtual() { return prioridadeAtual; }
@@ -102,6 +106,14 @@ public class ProcessControlBlock {
      */
     public void setReferenciasMemoria(List<Integer> referenciasMemoria) {
         this.referenciasMemoria = referenciasMemoria != null ? new ArrayList<>(referenciasMemoria) : new ArrayList<>();
+    }
+
+    public void incrementarTempoEsperando() {
+        this.tempoEsperando++;
+    }
+
+    public void resetarTempoEsperando() {
+        this.tempoEsperando = 0;
     }
 
     public void incrementarTempoExecutado() {
