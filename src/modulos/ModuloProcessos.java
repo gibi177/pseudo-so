@@ -3,7 +3,6 @@ package modulos;
 import processos.ProcessControlBlock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Mantém informações específicas do processo e atua como repositório global.
@@ -11,6 +10,7 @@ import java.util.stream.Collectors;
 public class ModuloProcessos {
     
     private List<ProcessControlBlock> processosCarregados;
+    private int processosFinalizados = 0;
 
     public ModuloProcessos() {
         this.processosCarregados = new ArrayList<>();
@@ -39,17 +39,12 @@ public class ModuloProcessos {
         return processosChegando;
     }
 
-    /**
-     * Verifica se todos os processos carregados já consumiram todo o seu tempo de CPU.
-     * Condição de parada para o loop principal do Despachante.
-     */
+    public void registrarProcessoConcluido() {
+        this.processosFinalizados++;
+    }
+
     public boolean isTodosConcluidos() {
-        for (ProcessControlBlock pcb : processosCarregados) {
-            if (!pcb.isConcluido()) {
-                return false;
-            }
-        }
-        return true;
+        return this.processosFinalizados == processosCarregados.size();
     }
 
     /**

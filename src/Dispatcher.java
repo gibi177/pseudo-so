@@ -16,144 +16,153 @@ import java.util.List;
  */
 public class Dispatcher {
 
+    // Gerenciadores encapsulados como propriedades de instância
+    private final ModuloProcessos processos;
+    private final GerenciadorFilas filas;
+    private final GerenciadorMemoria memoria;
+    private final GerenciadorRecursos recursos;
+    private final GerenciadorArquivos arquivos;
+
+    // Constantes de Escalonamento
+    private static final int LIMITE_STARVATION = 10;
+    private static final int QUANTUM_MAX = 1;
+
+    public Dispatcher() {
+        this.processos = new ModuloProcessos();
+        this.filas = new GerenciadorFilas();
+        this.memoria = new GerenciadorMemoria();
+        this.recursos = new GerenciadorRecursos();
+        this.arquivos = new GerenciadorArquivos();
+    }
+
     public static void main(String[] args) {
-        // Validação da quantidade de argumentos passados via terminal
         if (args.length != 3) {
             System.err.println("Erro: Quantidade de argumentos invalida.");
             System.err.println("Uso esperado: ./dispatcher <processes.txt> <files.txt> <string.txt>");
             System.exit(1);
         }
 
-        String caminhoProcessos = args[0];
-        String caminhoArquivos = args[1];
-        String caminhoStrings = args[2];
-
-        // Validação de existência e leitura dos arquivos
-        if (!arquivoValido(caminhoProcessos) || !arquivoValido(caminhoArquivos) || !arquivoValido(caminhoStrings)) {
+        if (!arquivoValido(args[0]) || !arquivoValido(args[1]) || !arquivoValido(args[2])) {
             System.err.println("Erro: Um ou mais arquivos de entrada nao existem ou nao possuem permissao de leitura.");
             System.exit(1);
         }
 
-        // Instanciação e amarração da arquitetura (Fase 1 finalizada)
-        ModuloProcessos processos = new ModuloProcessos();
-        GerenciadorFilas filas = new GerenciadorFilas();
-        GerenciadorMemoria memoria = new GerenciadorMemoria();
-        GerenciadorRecursos recursos = new GerenciadorRecursos();
-        GerenciadorArquivos arquivos = new GerenciadorArquivos();
+        Dispatcher despachante = new Dispatcher();
+        despachante.carregarDados(args[0], args[1], args[2]);
+        despachante.executarSimulacao();
+    }
 
-        System.out.println("Pseudo-SO inicializado. Módulos carregados com sucesso.");
-
+    private void carregarDados(String caminhoProcessos, String caminhoArquivos, String caminhoStrings) {
         try {
-            // Processos e Memória
+            System.out.println("Pseudo-SO inicializado. Módulos carregados com sucesso.");
+            
             List<ProcessControlBlock> pcbsLidos = LeitorEntrada.carregarProcessos(caminhoProcessos, caminhoStrings);
             processos.carregarTodos(pcbsLidos);
             System.out.println("Sucesso: " + processos.getTotalProcessos() + " processos carregados na memória de controle.");
 
-            // Sistema de Arquivos
             LeitorEntrada.carregarSistemaArquivos(caminhoArquivos, arquivos);
             System.out.println("Sucesso: Sistema de arquivos estruturado e fila de disco criada.");
+            
+        } catch (Exception e) {
+            System.err.println("Erro ao processar os arquivos de texto: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
 
-            // ... (setup inicial mantido)
-            System.out.println("--------------------------------------------------");
-            System.out.println("Iniciando simulação do Pseudo-SO...");
+    /**
+     * Motor principal do Pseudo-SO. Controla o ciclo de CPU, preempção e impressão de saídas.
+     */
+    private void executarSimulacao() {
+        System.out.println("--------------------------------------------------");
+        System.out.println("Iniciando simulação do Pseudo-SO...");
 
-            int tempoAtual = 0;
-            ProcessControlBlock processoNaCpu = null;
+        int tempoAtual = 0;
+        ProcessControlBlock processoNaCpu = null;
+        int tempoNoQuantum = 0; 
 
-            final int LIMITE_STARVATION = 10;
-            final int QUANTUM_MAX = 1; // Parametrização explícita exigida 
-            int tempoNoQuantum = 0;    // Rastreador do tempo de CPU no contexto atual
+        while (!processos.isTodosConcluidos()) {
+            
+            // 1. Acorda processos e enfileira
+            List<ProcessControlBlock> recemChegados = processos.getProcessosPorTempo(tempoAtual);
+            for (ProcessControlBlock pcb : recemChegados) {
+                filas.enfileirarProcesso(pcb);
+            }
 
-            System.out.println("--------------------------------------------------");
-            System.out.println("Iniciando simulação do Pseudo-SO...");
-
-            // Loop Principal de Execução (Fase 3)
-            while (!processos.isTodosConcluidos()) {
+            // 2. Escalonamento e Atribuição de CPU
+            if (processoNaCpu == null) {
+                processoNaCpu = filas.buscarProximoProcesso();
                 
-                // 1. Acorda processos e enfileira
-                List<ProcessControlBlock> recemChegados = processos.getProcessosPorTempo(tempoAtual);
-                for (ProcessControlBlock pcb : recemChegados) {
-                    filas.enfileirarProcesso(pcb);
-                }
-
-                // 2. Escalonamento e Atribuição de CPU
-                if (processoNaCpu == null) {
-                    processoNaCpu = filas.buscarProximoProcesso();
+                if (processoNaCpu != null) {
+                    processoNaCpu.resetarTempoEsperando();
+                    tempoNoQuantum = 0; 
                     
-                    if (processoNaCpu != null) {
-                        processoNaCpu.resetarTempoEsperando();
-                        tempoNoQuantum = 0; // Reset do quantum ao realizar troca de contexto
-                        
-                        if (processoNaCpu.getTempoExecutado() == 0) {
-                            System.out.println("dispatcher =>");
-                            System.out.println("PID: " + processoNaCpu.getId());
-                            System.out.println("frames: " + processoNaCpu.getTamanhoWorkingSet()); 
-                            System.out.println("priority: " + processoNaCpu.getPrioridadeBase());
-                            System.out.println("time: " + processoNaCpu.getTempoCpu());
-                            System.out.println("printers: " + processoNaCpu.getRequisicaoImpressora());
-                            System.out.println("scanners: " + processoNaCpu.getRequisicaoScanner());
-                            System.out.println("modems: " + processoNaCpu.getRequisicaoModem());
-                            System.out.println("drives: " + processoNaCpu.getRequisicaoDiscoSata());
-                            System.out.println("process " + processoNaCpu.getId() + " =>");
-                            System.out.println("P" + processoNaCpu.getId() + " STARTED");
-                        }
+                    if (processoNaCpu.getTempoExecutado() == 0) {
+                        imprimirCabecalhoProcesso(processoNaCpu); // Extraído para manter o código limpo
                     }
                 }
+            }
 
-                // 3. Execução do Processo na CPU
+            // 3. Execução do Processo na CPU
                 if (processoNaCpu != null) {
                     processoNaCpu.setEstadoAtual(EstadoProcesso.EXECUTANDO);
                     processoNaCpu.incrementarTempoExecutado();
-                    tempoNoQuantum++; // Acumula o uso do milissegundo atual
+                    tempoNoQuantum++; 
                     
                     System.out.println("P" + processoNaCpu.getId() + " instruction " + processoNaCpu.getTempoExecutado());
 
                     // Verificação de Término
                     if (processoNaCpu.isConcluido()) {
                         System.out.println("P" + processoNaCpu.getId() + " return SIGINT");
-                        processoNaCpu = null; // CPU ficará livre no próximo tick
+                        
+                        // CORREÇÃO: Notifica o módulo global para atualizar o contador de término
+                        processos.registrarProcessoConcluido(); 
+                        
+                        processoNaCpu = null; 
                         
                     } else if (processoNaCpu.getPrioridadeBase() > 0) { 
-                        // Validação explícita de preempção: apenas Usuário [cite: 18, 26]
-                        
-                        if (tempoNoQuantum >= QUANTUM_MAX) { // Controle estruturado do Quantum
+                        // Preempção apenas para processos de Usuário [cite: 26]
+                        if (tempoNoQuantum >= QUANTUM_MAX) { 
                             processoNaCpu.setEstadoAtual(EstadoProcesso.PRONTO);
                             
-                            // Realimentação: a prioridade decai (o valor numérico sobe) [cite: 20]
                             if (processoNaCpu.getPrioridadeAtual() < 3) {
-                                processoNaCpu.setPrioridadeAtual(processoNaCpu.getPrioridadeAtual() + 1);
+                                processoNaCpu.setPrioridadeAtual(processoNaCpu.getPrioridadeAtual() + 1); // Realimentação [cite: 20]
                             }
                             
                             filas.enfileirarProcesso(processoNaCpu);
-                            processoNaCpu = null; // Cede a CPU
+                            processoNaCpu = null; 
                         }
                     }
-                    // Se prioridadeBase == 0 (Tempo Real), ele ignora o quantum e roda até acabar.
                 }
 
-                // 4. Mecanismo de Prevenção de Starvation
-                filas.aplicarAgingGlobal(LIMITE_STARVATION);
+            // 4. Mecanismo de Prevenção de Starvation
+            filas.aplicarAgingGlobal(LIMITE_STARVATION);
 
-                tempoAtual++;
-                
-                if (tempoAtual > 50000) { 
-                    System.err.println("Timeout de segurança atingido. Possivel deadlock.");
-                    break;
-                }
-            }
-
-            System.out.println("Simulação concluída no tempo: " + tempoAtual);
+            tempoAtual++;
             
-        } catch (Exception e) {
-            System.err.println("Erro ao processar os arquivos de texto: " + e.getMessage());
-            e.printStackTrace(); // Útil para depurar formatação na Fase 2
-            System.exit(1);
+            if (tempoAtual > 50000) { 
+                System.err.println("Timeout de segurança atingido. Possivel deadlock.");
+                break;
+            }
         }
+
+        System.out.println("Simulação concluída no tempo: " + tempoAtual);
     }
 
-    /**
-     * Verifica se o arquivo existe e pode ser lido.
-     */
+    private void imprimirCabecalhoProcesso(ProcessControlBlock pcb) {
+        System.out.println("dispatcher =>");
+        System.out.println("PID: " + pcb.getId());
+        System.out.println("frames: " + pcb.getTamanhoWorkingSet()); 
+        System.out.println("priority: " + pcb.getPrioridadeBase());
+        System.out.println("time: " + pcb.getTempoCpu());
+        System.out.println("printers: " + pcb.getRequisicaoImpressora());
+        System.out.println("scanners: " + pcb.getRequisicaoScanner());
+        System.out.println("modems: " + pcb.getRequisicaoModem());
+        System.out.println("drives: " + pcb.getRequisicaoDiscoSata());
+        System.out.println("process " + pcb.getId() + " =>");
+        System.out.println("P" + pcb.getId() + " STARTED");
+    }
+
     private static boolean arquivoValido(String caminho) {
         File arquivo = new File(caminho);
         return arquivo.exists() && arquivo.canRead();

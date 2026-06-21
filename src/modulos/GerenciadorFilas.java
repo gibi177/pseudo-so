@@ -14,6 +14,9 @@ public class GerenciadorFilas {
     private final Queue<ProcessControlBlock> filaUsuario1;
     private final Queue<ProcessControlBlock> filaUsuario2;
     private final Queue<ProcessControlBlock> filaUsuario3;
+    
+    // Limite arquitetural definido na especificação 
+    private static final int CAPACIDADE_MAXIMA = 1000;
 
     public GerenciadorFilas() {
         this.filaTempoReal = new LinkedList<>();
@@ -22,9 +25,22 @@ public class GerenciadorFilas {
         this.filaUsuario3 = new LinkedList<>();
     }
 
+    /**
+     * Retorna o total de processos atualmente aguardando em todas as filas.
+     */
+    public int getTotalProcessosEnfileirados() {
+        return filaTempoReal.size() + filaUsuario1.size() + filaUsuario2.size() + filaUsuario3.size();
+    }
+
     public void enfileirarProcesso(ProcessControlBlock pcb) {
         if (pcb.isConcluido()) {
             return;
+        }
+
+        // Aplicação do padrão Fail-Fast para evitar o Paradoxo do Processo Zumbi
+        if (getTotalProcessosEnfileirados() >= CAPACIDADE_MAXIMA) {
+            throw new IllegalStateException("Falha crítica: Limite arquitetural de " + CAPACIDADE_MAXIMA + 
+                                            " processos nas filas atingido. O SO não pode despachar o PID " + pcb.getId() + ".");
         }
 
         int prioridade = pcb.getPrioridadeAtual();
@@ -49,13 +65,13 @@ public class GerenciadorFilas {
 
     /**
      * Incrementa o contador de espera para todos os processos enfileirados e
-     * aplica o aging aos processos que ultrapassaram o limite de tolerância[cite: 24].
+     * aplica o aging aos processos que ultrapassaram o limite de tolerância.
      */
     public void aplicarAgingGlobal(int limiteStarvation) {
-        // Filas a serem avaliadas (Tempo Real não sofre aging)
         Queue[] filasUsuario = {filaUsuario1, filaUsuario2, filaUsuario3};
 
         for (int i = 0; i < filasUsuario.length; i++) {
+            // ... (restante do método permanece idêntico)
             Queue<ProcessControlBlock> filaAtiva = filasUsuario[i];
             int tamanhoOriginal = filaAtiva.size();
 
@@ -64,14 +80,11 @@ public class GerenciadorFilas {
                 if (pcb != null) {
                     pcb.incrementarTempoEsperando();
 
-                    // Se a fila atual (i) for a 1, 2 ou 3 (índices 0, 1, 2) e o processo estourou o limite de espera
                     if (i > 0 && pcb.getTempoEsperando() >= limiteStarvation) {
                         pcb.resetarTempoEsperando();
-                        // Promove a prioridade (diminui o valor numérico) [cite: 24]
-                        pcb.setPrioridadeAtual(pcb.getPrioridadeAtual() - 1);
-                        enfileirarProcesso(pcb); // Reinsere na fila promovida
+                        pcb.setPrioridadeAtual(pcb.getPrioridadeAtual() - 1); // Promove prioridade [cite: 24]
+                        enfileirarProcesso(pcb); 
                     } else {
-                        // Não promove, devolve para o final da mesma fila
                         filaAtiva.add(pcb);
                     }
                 }
