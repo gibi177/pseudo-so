@@ -98,42 +98,58 @@ public class Dispatcher {
                     tempoNoQuantum = 0; 
                     
                     if (processoNaCpu.getTempoExecutado() == 0) {
-                        imprimirCabecalhoProcesso(processoNaCpu); // Extraído para manter o código limpo
+                        imprimirCabecalhoProcesso(processoNaCpu); 
                     }
                 }
             }
 
             // 3. Execução do Processo na CPU
-                if (processoNaCpu != null) {
-                    processoNaCpu.setEstadoAtual(EstadoProcesso.EXECUTANDO);
-                    processoNaCpu.incrementarTempoExecutado();
-                    tempoNoQuantum++; 
-                    
-                    System.out.println("P" + processoNaCpu.getId() + " instruction " + processoNaCpu.getTempoExecutado());
+            if (processoNaCpu != null) {
+                processoNaCpu.setEstadoAtual(EstadoProcesso.EXECUTANDO);
+                processoNaCpu.incrementarTempoExecutado();
+                tempoNoQuantum++; 
+                
+                System.out.println("P" + processoNaCpu.getId() + " instruction " + processoNaCpu.getTempoExecutado());
 
-                    // Verificação de Término
-                    if (processoNaCpu.isConcluido()) {
-                        System.out.println("P" + processoNaCpu.getId() + " return SIGINT");
-                        
-                        // CORREÇÃO: Notifica o módulo global para atualizar o contador de término
-                        processos.registrarProcessoConcluido(); 
-                        
-                        processoNaCpu = null; 
-                        
-                    } else if (processoNaCpu.getPrioridadeBase() > 0) { 
-                        // Preempção apenas para processos de Usuário [cite: 26]
-                        if (tempoNoQuantum >= QUANTUM_MAX) { 
-                            processoNaCpu.setEstadoAtual(EstadoProcesso.PRONTO);
-                            
-                            if (processoNaCpu.getPrioridadeAtual() < 3) {
-                                processoNaCpu.setPrioridadeAtual(processoNaCpu.getPrioridadeAtual() + 1); // Realimentação [cite: 20]
-                            }
-                            
-                            filas.enfileirarProcesso(processoNaCpu);
-                            processoNaCpu = null; 
-                        }
+                // INTEGRAÇÃO DA MEMÓRIA (Fase 4)
+                List<Integer> refs = processoNaCpu.getReferenciasMemoria();
+                if (!refs.isEmpty() && processoNaCpu.getTempoCpu() > 0) {
+                    // Calcula proporcionalmente quantas páginas ler neste ciclo da CPU
+                    int paginasPorTick = (int) Math.ceil((double) refs.size() / processoNaCpu.getTempoCpu());
+                    
+                    int inicio = processoNaCpu.getProgramCounterMemoria();
+                    int fim = Math.min(inicio + paginasPorTick, refs.size());
+
+                    for (int i = inicio; i < fim; i++) {
+                        int paginaRequisitada = refs.get(i);
+                        memoria.acessarPagina(processoNaCpu, paginaRequisitada);
+                        processoNaCpu.avancarProgramCounterMemoria();
                     }
                 }
+
+                // Verificação de Término
+                if (processoNaCpu.isConcluido()) {
+                    System.out.println("P" + processoNaCpu.getId() + " return SIGINT");
+
+		    // Libera os frames físicos ocupados pelo processo que morreu
+    		    memoria.liberarMemoria(processoNaCpu);
+                    
+                    processos.registrarProcessoConcluido(); 
+                    processoNaCpu = null; 
+                    
+                } else if (processoNaCpu.getPrioridadeBase() > 0) { 
+                    if (tempoNoQuantum >= QUANTUM_MAX) { 
+                        processoNaCpu.setEstadoAtual(EstadoProcesso.PRONTO);
+                        
+                        if (processoNaCpu.getPrioridadeAtual() < 3) {
+                            processoNaCpu.setPrioridadeAtual(processoNaCpu.getPrioridadeAtual() + 1); 
+                        }
+                        
+                        filas.enfileirarProcesso(processoNaCpu);
+                        processoNaCpu = null; 
+                    }
+                }
+            }
 
             // 4. Mecanismo de Prevenção de Starvation
             filas.aplicarAgingGlobal(LIMITE_STARVATION);
@@ -146,7 +162,16 @@ public class Dispatcher {
             }
         }
 
-        System.out.println("Simulação concluída no tempo: " + tempoAtual);
+        // --- RELATÓRIO FINAL DA SIMULAÇÃO ---
+        System.out.println("--------------------------------------------------");
+        System.out.println("Número de Faltas de Páginas por processo:");
+        
+        for (int i = 0; i < processos.getTotalProcessos(); i++) {
+            ProcessControlBlock p = processos.getProcessoPorId(i);
+            if (p != null) {
+                System.out.println("P" + p.getId() + " = " + p.getPageFaults() + " faltas de páginas");
+            }
+        }
     }
 
     private void imprimirCabecalhoProcesso(ProcessControlBlock pcb) {
