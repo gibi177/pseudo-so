@@ -1,195 +1,258 @@
-import modulos.ModuloProcessos;
-import modulos.GerenciadorFilas;
-import modulos.GerenciadorMemoria;
-import modulos.GerenciadorRecursos;
-import modulos.GerenciadorArquivos;
-import processos.ProcessControlBlock;
-import processos.EstadoProcesso;
+import modulos.*;
+import processos.*;
 import util.LeitorEntrada;
+import arquivos.OperacaoArquivo;
 
 import java.io.File;
 import java.util.List;
 
 /**
- * Classe principal responsável por despachar e inicializar o pseudo-SO.
- * Ponto de entrada da aplicação.
- */
-public class Dispatcher {
 
-    // Gerenciadores encapsulados como propriedades de instância
-    private final ModuloProcessos processos;
-    private final GerenciadorFilas filas;
-    private final GerenciadorMemoria memoria;
-    private final GerenciadorRecursos recursos;
-    private final GerenciadorArquivos arquivos;
+* Classe principal responsável por despachar e inicializar o pseudo-SO.
+  */
+  public class Dispatcher {
 
-    // Constantes de Escalonamento
-    private static final int LIMITE_STARVATION = 10;
-    private static final int QUANTUM_MAX = 1;
+  private final ModuloProcessos processos;
+  private final GerenciadorFilas filas;
+  private final GerenciadorMemoria memoria;
+  private final GerenciadorRecursos recursos;
+  private final GerenciadorArquivos arquivos;
 
-    public Dispatcher() {
-        this.processos = new ModuloProcessos();
-        this.filas = new GerenciadorFilas();
-        this.memoria = new GerenciadorMemoria();
-        this.recursos = new GerenciadorRecursos();
-        this.arquivos = new GerenciadorArquivos();
-    }
+  private static final int LIMITE_STARVATION = 10;
+  private static final int QUANTUM_MAX = 1;
 
-    public static void main(String[] args) {
-        if (args.length != 3) {
-            System.err.println("Erro: Quantidade de argumentos invalida.");
-            System.err.println("Uso esperado: ./dispatcher <processes.txt> <files.txt> <string.txt>");
-            System.exit(1);
-        }
+  public Dispatcher() {
+  this.processos = new ModuloProcessos();
+  this.filas = new GerenciadorFilas();
+  this.memoria = new GerenciadorMemoria();
+  this.recursos = new GerenciadorRecursos();
+  this.arquivos = new GerenciadorArquivos();
+  }
 
-        if (!arquivoValido(args[0]) || !arquivoValido(args[1]) || !arquivoValido(args[2])) {
-            System.err.println("Erro: Um ou mais arquivos de entrada nao existem ou nao possuem permissao de leitura.");
-            System.exit(1);
-        }
+  public static void main(String[] args) {
+  if (args.length != 3) {
+  System.err.println("Uso: ./dispatcher <processes.txt> <files.txt> <string.txt>");
+  System.exit(1);
+  }
 
-        Dispatcher despachante = new Dispatcher();
-        despachante.carregarDados(args[0], args[1], args[2]);
-        despachante.executarSimulacao();
-    }
+  ```
+   if (!arquivoValido(args[0]) || !arquivoValido(args[1]) || !arquivoValido(args[2])) {
+       System.err.println("Erro: Arquivo inválido.");
+       System.exit(1);
+   }
 
-    private void carregarDados(String caminhoProcessos, String caminhoArquivos, String caminhoStrings) {
-        try {
-            System.out.println("Pseudo-SO inicializado. Módulos carregados com sucesso.");
-            
-            List<ProcessControlBlock> pcbsLidos = LeitorEntrada.carregarProcessos(caminhoProcessos, caminhoStrings);
-            processos.carregarTodos(pcbsLidos);
-            System.out.println("Sucesso: " + processos.getTotalProcessos() + " processos carregados na memória de controle.");
+   Dispatcher d = new Dispatcher();
+   d.carregarDados(args[0], args[1], args[2]);
+   d.executarSimulacao();
+  ```
 
-            LeitorEntrada.carregarSistemaArquivos(caminhoArquivos, arquivos);
-            System.out.println("Sucesso: Sistema de arquivos estruturado e fila de disco criada.");
-            
-        } catch (Exception e) {
-            System.err.println("Erro ao processar os arquivos de texto: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(1);
-        }
-    }
+  }
 
-    /**
-     * Motor principal do Pseudo-SO. Controla o ciclo de CPU, preempção e impressão de saídas.
-     */
-    private void executarSimulacao() {
-        System.out.println("--------------------------------------------------");
-        System.out.println("Iniciando simulação do Pseudo-SO...");
+  private void carregarDados(String p, String f, String s) {
+  try {
+  List<ProcessControlBlock> pcbs = LeitorEntrada.carregarProcessos(p, s);
+  processos.carregarTodos(pcbs);
 
-        int tempoAtual = 0;
-        ProcessControlBlock processoNaCpu = null;
-        int tempoNoQuantum = 0; 
+  ```
+       LeitorEntrada.carregarSistemaArquivos(f, arquivos);
 
-        while (!processos.isTodosConcluidos()) {
-            
-            // 1. Acorda processos e enfileira
-            List<ProcessControlBlock> recemChegados = processos.getProcessosPorTempo(tempoAtual);
-            for (ProcessControlBlock pcb : recemChegados) {
-                filas.enfileirarProcesso(pcb);
-            }
+   } catch (Exception e) {
+       System.err.println("Erro ao carregar dados: " + e.getMessage());
+       System.exit(1);
+   }
+  ```
 
-            // 2. Escalonamento e Atribuição de CPU
-            if (processoNaCpu == null) {
-                processoNaCpu = filas.buscarProximoProcesso();
-                
-                if (processoNaCpu != null) {
-                    processoNaCpu.resetarTempoEsperando();
-                    tempoNoQuantum = 0; 
-                    
-                    if (processoNaCpu.getTempoExecutado() == 0) {
-                        imprimirCabecalhoProcesso(processoNaCpu); 
-                    }
-                }
-            }
+  }
 
-            // 3. Execução do Processo na CPU
-            if (processoNaCpu != null) {
-                processoNaCpu.setEstadoAtual(EstadoProcesso.EXECUTANDO);
-                processoNaCpu.incrementarTempoExecutado();
-                tempoNoQuantum++; 
-                
-                System.out.println("P" + processoNaCpu.getId() + " instruction " + processoNaCpu.getTempoExecutado());
+  // ======================================================
+  // LOOP PRINCIPAL
+  // ======================================================
+  private void executarSimulacao() {
 
-                // INTEGRAÇÃO DA MEMÓRIA (Fase 4)
-                List<Integer> refs = processoNaCpu.getReferenciasMemoria();
-                if (!refs.isEmpty() && processoNaCpu.getTempoCpu() > 0) {
-                    // Calcula proporcionalmente quantas páginas ler neste ciclo da CPU
-                    int paginasPorTick = (int) Math.ceil((double) refs.size() / processoNaCpu.getTempoCpu());
-                    
-                    int inicio = processoNaCpu.getProgramCounterMemoria();
-                    int fim = Math.min(inicio + paginasPorTick, refs.size());
+  ```
+   int tempo = 0;
+   ProcessControlBlock cpu = null;
+   int tempoQuantum = 0;
 
-                    for (int i = inicio; i < fim; i++) {
-                        int paginaRequisitada = refs.get(i);
-                        memoria.acessarPagina(processoNaCpu, paginaRequisitada);
-                        processoNaCpu.avancarProgramCounterMemoria();
-                    }
-                }
+   while (!processos.isTodosConcluidos()) {
 
-                // Verificação de Término
-                if (processoNaCpu.isConcluido()) {
-                    System.out.println("P" + processoNaCpu.getId() + " return SIGINT");
+       // 1. chegada de processos
+       for (ProcessControlBlock pcb : processos.getProcessosPorTempo(tempo)) {
+           filas.enfileirarProcesso(pcb);
+       }
 
-		    // Libera os frames físicos ocupados pelo processo que morreu
-    		    memoria.liberarMemoria(processoNaCpu);
-                    
-                    processos.registrarProcessoConcluido(); 
-                    processoNaCpu = null; 
-                    
-                } else if (processoNaCpu.getPrioridadeBase() > 0) { 
-                    if (tempoNoQuantum >= QUANTUM_MAX) { 
-                        processoNaCpu.setEstadoAtual(EstadoProcesso.PRONTO);
-                        
-                        if (processoNaCpu.getPrioridadeAtual() < 3) {
-                            processoNaCpu.setPrioridadeAtual(processoNaCpu.getPrioridadeAtual() + 1); 
-                        }
-                        
-                        filas.enfileirarProcesso(processoNaCpu);
-                        processoNaCpu = null; 
-                    }
-                }
-            }
+       // 2. escalonamento
+       if (cpu == null) {
+           cpu = filas.buscarProximoProcesso();
 
-            // 4. Mecanismo de Prevenção de Starvation
-            filas.aplicarAgingGlobal(LIMITE_STARVATION);
+           if (cpu != null) {
+               cpu.resetarTempoEsperando();
+               tempoQuantum = 0;
 
-            tempoAtual++;
-            
-            if (tempoAtual > 50000) { 
-                System.err.println("Timeout de segurança atingido. Possivel deadlock.");
-                break;
-            }
-        }
+               if (cpu.getTempoExecutado() == 0) {
+                   imprimirCabecalhoProcesso(cpu);
+               }
+           }
+       }
 
-        // --- RELATÓRIO FINAL DA SIMULAÇÃO ---
-        System.out.println("--------------------------------------------------");
-        System.out.println("Número de Faltas de Páginas por processo:");
-        
-        for (int i = 0; i < processos.getTotalProcessos(); i++) {
-            ProcessControlBlock p = processos.getProcessoPorId(i);
-            if (p != null) {
-                System.out.println("P" + p.getId() + " = " + p.getPageFaults() + " faltas de páginas");
-            }
-        }
-    }
+       // 3. execução
+       if (cpu != null) {
 
-    private void imprimirCabecalhoProcesso(ProcessControlBlock pcb) {
-        System.out.println("dispatcher =>");
-        System.out.println("PID: " + pcb.getId());
-        System.out.println("frames: " + pcb.getTamanhoWorkingSet()); 
-        System.out.println("priority: " + pcb.getPrioridadeBase());
-        System.out.println("time: " + pcb.getTempoCpu());
-        System.out.println("printers: " + pcb.getRequisicaoImpressora());
-        System.out.println("scanners: " + pcb.getRequisicaoScanner());
-        System.out.println("modems: " + pcb.getRequisicaoModem());
-        System.out.println("drives: " + pcb.getRequisicaoDiscoSata());
-        System.out.println("process " + pcb.getId() + " =>");
-        System.out.println("P" + pcb.getId() + " STARTED");
-    }
+           cpu.incrementarTempoExecutado();
+           tempoQuantum++;
 
-    private static boolean arquivoValido(String caminho) {
-        File arquivo = new File(caminho);
-        return arquivo.exists() && arquivo.canRead();
-    }
-}
+           System.out.println("P" + cpu.getId() + " instruction " + cpu.getTempoExecutado());
+
+           executarMemoria(cpu);
+
+           // término
+           if (cpu.isConcluido()) {
+               System.out.println("P" + cpu.getId() + " return SIGINT");
+
+               memoria.liberarMemoria(cpu);
+               processos.registrarProcessoConcluido();
+
+               cpu = null;
+
+           } else if (cpu.getPrioridadeBase() > 0 && tempoQuantum >= QUANTUM_MAX) {
+
+               cpu.setPrioridadeAtual(Math.min(3, cpu.getPrioridadeAtual() + 1));
+               filas.enfileirarProcesso(cpu);
+               cpu = null;
+           }
+       }
+
+       filas.aplicarAgingGlobal(LIMITE_STARVATION);
+       tempo++;
+
+       if (tempo > 50000) break;
+   }
+
+   // FASE 6
+   executarSistemaArquivos();
+
+   imprimirRelatorioFinal();
+  ```
+
+  }
+
+  // ======================================================
+  // MEMÓRIA
+  // ======================================================
+  private void executarMemoria(ProcessControlBlock pcb) {
+
+  ```
+   List<Integer> refs = pcb.getReferenciasMemoria();
+
+   if (refs.isEmpty()) return;
+
+   int paginasPorTick = (int) Math.ceil((double) refs.size() / pcb.getTempoCpu());
+
+   int inicio = pcb.getProgramCounterMemoria();
+   int fim = Math.min(inicio + paginasPorTick, refs.size());
+
+   for (int i = inicio; i < fim; i++) {
+       memoria.acessarPagina(pcb, refs.get(i));
+       pcb.avancarProgramCounterMemoria();
+   }
+  ```
+
+  }
+
+  // ======================================================
+  // SISTEMA DE ARQUIVOS (FASE 6)
+  // ======================================================
+  private void executarSistemaArquivos() {
+
+  ```
+   System.out.println("Sistema de arquivos =>");
+
+   List<OperacaoArquivo> ops = arquivos.getFilaOperacoes();
+
+   int contador = 1;
+
+   for (OperacaoArquivo op : ops) {
+
+       System.out.println("Operação " + contador + " =>");
+
+       ProcessControlBlock pcb = processos.getProcessoPorId(op.getPid());
+
+       if (pcb == null) {
+           System.out.println("Falha");
+           System.out.println("O processo " + op.getPid() + " não existe.");
+           contador++;
+           continue;
+       }
+
+       boolean sucesso;
+
+        if (op.getTipoOperacao() == TipoOperacao.CRIAR) {
+
+            sucesso = arquivos.criarArquivo(pcb, op.getNomeArquivo(), op.getTamanhoBlocos());
+
+           if (sucesso) {
+               System.out.println("Sucesso");
+               System.out.println("O processo " + pcb.getId() +
+                       " criou o arquivo " + op.getNomeArquivo() + ".");
+           } else {
+               System.out.println("Falha");
+               System.out.println("O processo " + pcb.getId() +
+                       " não pode criar o arquivo " + op.getNomeArquivo() + ".");
+           }
+
+       } else if (op.getTipoOperacao() == TipoOperacao.DELETAR) {
+
+            sucesso = arquivos.deletarArquivo(pcb, op.getNomeArquivo());
+
+           if (sucesso) {
+               System.out.println("Sucesso");
+               System.out.println("O processo " + pcb.getId() +
+                       " deletou o arquivo " + op.getNomeArquivo() + ".");
+           } else {
+               System.out.println("Falha");
+               System.out.println("O processo " + pcb.getId() +
+                       " não pode deletar o arquivo " + op.getNomeArquivo() + ".");
+           }
+       }
+
+       contador++;
+   }
+
+   arquivos.imprimirMapaDisco();
+  ```
+
+  }
+
+  // ======================================================
+  // RELATÓRIO FINAL
+  // ======================================================
+  private void imprimirRelatorioFinal() {
+
+  ```
+   System.out.println("Número de Faltas de Páginas por processo:");
+
+   for (int i = 0; i < processos.getTotalProcessos(); i++) {
+       ProcessControlBlock p = processos.getProcessoPorId(i);
+       if (p != null) {
+           System.out.println("P" + p.getId() + " = " + p.getPageFaults());
+       }
+   }
+  ```
+
+  }
+
+  private void imprimirCabecalhoProcesso(ProcessControlBlock pcb) {
+  System.out.println("dispatcher =>");
+  System.out.println("PID: " + pcb.getId());
+  System.out.println("frames: " + pcb.getTamanhoWorkingSet());
+  System.out.println("priority: " + pcb.getPrioridadeBase());
+  System.out.println("time: " + pcb.getTempoCpu());
+  System.out.println("process " + pcb.getId() + " =>");
+  System.out.println("P" + pcb.getId() + " STARTED");
+  }
+
+  private static boolean arquivoValido(String caminho) {
+  File arquivo = new File(caminho);
+  return arquivo.exists() && arquivo.canRead();
+  }
+  }
