@@ -11,163 +11,146 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Trata as operações create e delete sobre os arquivos persistidos logicamente
+ * no disco.
+ */
+public class GerenciadorArquivos {
 
-* Trata as operações create e delete sobre os arquivos persistidos logicamente no disco.
-  */
-  public class GerenciadorArquivos {
+    public static final int AUTORIA_SISTEMA = -1;
 
-  public static final int AUTORIA_SISTEMA = -1;
+    private String[] disco;
+    private Map<String, Integer> metadadosAutoria;
+    private List<OperacaoArquivo> filaOperacoes;
 
-  private String[] disco;
-  private Map<String, Integer> metadadosAutoria;
-  private List<OperacaoArquivo> filaOperacoes;
+    public GerenciadorArquivos() {
+        this.filaOperacoes = new ArrayList<>();
+        this.metadadosAutoria = new HashMap<>();
+    }
 
-  public GerenciadorArquivos() {
-  this.filaOperacoes = new ArrayList<>();
-  this.metadadosAutoria = new HashMap<>();
-  }
+    public void inicializarDisco(int quantidadeBlocos) {
+        this.disco = new String[quantidadeBlocos];
+        Arrays.fill(this.disco, "0");
+    }
 
-  public void inicializarDisco(int quantidadeBlocos) {
-  this.disco = new String[quantidadeBlocos];
-  Arrays.fill(this.disco, "0");
-  }
+    public void registrarBlocoOcupadoInicial(String nomeArquivo, int indiceInicial, int tamanho, int idAutor) {
+        if (indiceInicial + tamanho > disco.length) {
+            throw new IllegalArgumentException(
+                    "Erro Crítico: Arquivo pré-existente '" + nomeArquivo +
+                            "' tenta ocupar blocos além do tamanho total do disco.");
+        }
 
-  public void registrarBlocoOcupadoInicial(String nomeArquivo, int indiceInicial, int tamanho, int idAutor) {
-  if (indiceInicial + tamanho > disco.length) {
-  throw new IllegalArgumentException("Erro Crítico: Arquivo pré-existente '" + nomeArquivo +
-  "' tenta ocupar blocos além do tamanho total do disco.");
-  }
+        for (int i = indiceInicial; i < indiceInicial + tamanho; i++) {
+            if (!"0".equals(disco[i])) {
+                throw new IllegalStateException(
+                        "Bloco " + i + " já está ocupado por " + disco[i]);
+            }
+            disco[i] = nomeArquivo;
+        }
 
-  ```
-   for (int i = indiceInicial; i < indiceInicial + tamanho; i++) {
-       if (!"0".equals(disco[i])) {
-           throw new IllegalStateException("Bloco " + i + " já está ocupado por " + disco[i]);
-       }
-       disco[i] = nomeArquivo;
-   }
+        metadadosAutoria.put(nomeArquivo, idAutor);
+    }
 
-   metadadosAutoria.put(nomeArquivo, idAutor);
-  ```
+    public void carregarFilaOperacoes(List<OperacaoArquivo> operacoes) {
+        if (operacoes != null) {
+            this.filaOperacoes = new ArrayList<>(operacoes);
+        }
+    }
 
-  }
+    public List<OperacaoArquivo> getFilaOperacoes() {
+        return Collections.unmodifiableList(filaOperacoes);
+    }
 
-  public void carregarFilaOperacoes(List<OperacaoArquivo> operacoes) {
-  if (operacoes != null) {
-  this.filaOperacoes = new ArrayList<>(operacoes);
-  }
-  }
+    // ======================================================
+    // CREATE (FIRST-FIT CONTÍGUO)
+    // ======================================================
+    public int criarArquivo(ProcessControlBlock pcb, String nomeArquivo, int tamanhoBlocos) {
+        if (disco == null || tamanhoBlocos <= 0)
+            return -1;
+        if (metadadosAutoria.containsKey(nomeArquivo))
+            return -1;
 
-  public List<OperacaoArquivo> getFilaOperacoes() {
-  return Collections.unmodifiableList(filaOperacoes);
-  }
+        int inicio = buscarFirstFit(tamanhoBlocos);
+        if (inicio == -1)
+            return -1;
 
-  // ======================================================
-  // CREATE (FIRST-FIT CONTÍGUO)
-  // ======================================================
-  public boolean criarArquivo(ProcessControlBlock pcb, String nomeArquivo, int tamanhoBlocos) {
+        for (int i = inicio; i < inicio + tamanhoBlocos; i++) {
+            disco[i] = nomeArquivo;
+        }
 
-  ```
-   if (disco == null || tamanhoBlocos <= 0) return false;
+        metadadosAutoria.put(nomeArquivo, pcb.getId());
+        return inicio; // Retorna o bloco inicial em vez de "true"
+    }
 
-   // Arquivo já existe
-   if (metadadosAutoria.containsKey(nomeArquivo)) {
-       return false;
-   }
+    // ======================================================
+    // DELETE
+    // ======================================================
+    public boolean deletarArquivo(ProcessControlBlock pcb, String nomeArquivo) {
 
-   int inicio = buscarFirstFit(tamanhoBlocos);
+        if (disco == null) {
+            return false;
+        }
 
-   // Não encontrou espaço contíguo suficiente
-   if (inicio == -1) {
-       return false;
-   }
+        // Arquivo não existe
+        if (!metadadosAutoria.containsKey(nomeArquivo)) {
+            return false;
+        }
 
-   // Alocar no disco
-   for (int i = inicio; i < inicio + tamanhoBlocos; i++) {
-       disco[i] = nomeArquivo;
-   }
+        int autor = metadadosAutoria.get(nomeArquivo);
+        boolean ehTempoReal = pcb.getPrioridadeBase() == 0;
 
-   // Registrar autoria
-   metadadosAutoria.put(nomeArquivo, pcb.getId());
+        // Regra de permissão
+        if (!ehTempoReal && autor != pcb.getId()) {
+            return false;
+        }
 
-   return true;
-  ```
+        // Remover do disco
+        for (int i = 0; i < disco.length; i++) {
+            if (nomeArquivo.equals(disco[i])) {
+                disco[i] = "0";
+            }
+        }
 
-  }
+        // Remover metadado
+        metadadosAutoria.remove(nomeArquivo);
+        return true;
+    }
 
-  // ======================================================
-  // DELETE
-  // ======================================================
-  public boolean deletarArquivo(ProcessControlBlock pcb, String nomeArquivo) {
+    // ======================================================
+    // FIRST-FIT CONTÍGUO (SAFE)
+    // ======================================================
+    private int buscarFirstFit(int tamanho) {
 
-  ```
-   if (disco == null) return false;
+        int contador = 0;
 
-   // Arquivo não existe
-   if (!metadadosAutoria.containsKey(nomeArquivo)) {
-       return false;
-   }
+        for (int i = 0; i < disco.length; i++) {
 
-   int autor = metadadosAutoria.get(nomeArquivo);
+            if ("0".equals(disco[i])) {
+                contador++;
+            } else {
+                contador = 0;
+            }
 
-   boolean ehTempoReal = pcb.getPrioridade() == 0;
+            if (contador == tamanho) {
+                return i - tamanho + 1;
+            }
+        }
 
-   // Regra de permissão
-   if (!ehTempoReal && autor != pcb.getId()) {
-       return false;
-   }
+        return -1;
+    }
 
-   // Remover do disco
-   for (int i = 0; i < disco.length; i++) {
-       if (nomeArquivo.equals(disco[i])) {
-           disco[i] = "0";
-       }
-   }
+    // ======================================================
+    // DEBUG / SAÍDA FINAL
+    // ======================================================
+    public void imprimirMapaDisco() {
+        System.out.println("Mapa de ocupação do disco:");
 
-   // Remover metadado
-   metadadosAutoria.remove(nomeArquivo);
-
-   return true;
-  ```
-
-  }
-
-  // ======================================================
-  // FIRST-FIT CONTÍGUO (SAFE)
-  // ======================================================
-  private int buscarFirstFit(int tamanho) {
-
-  ```
-   int contador = 0;
-
-   for (int i = 0; i < disco.length; i++) {
-
-       if ("0".equals(disco[i])) {
-           contador++;
-       } else {
-           contador = 0;
-       }
-
-       if (contador == tamanho) {
-           return i - tamanho + 1;
-       }
-   }
-
-   return -1;
-  ```
-
-  }
-
-  // ======================================================
-  // DEBUG / SAÍDA FINAL
-  // ======================================================
-  public void imprimirMapaDisco() {
-  System.out.println("Mapa de ocupação do disco:");
-
-  ```
-   for (String bloco : disco) {
-       System.out.print(bloco + " ");
-   }
-   System.out.println();
-  ```
-  }
-  }
+        for (int i = 0; i < disco.length; i++) {
+            System.out.print(disco[i]);
+            // Coloca um espaço, mas não quebra a linha até acabar
+            if (i < disco.length - 1) {
+                 System.out.print(" ");
+            }
+        }
+        System.out.println();
+    }
+}

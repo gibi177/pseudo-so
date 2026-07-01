@@ -18,7 +18,7 @@ public class OperacaoArquivo {
         this.tamanhoBlocos = tamanhoBlocos;
 
         if (tipoOperacao == TipoOperacao.CRIAR && tamanhoBlocos <= 0) {
-        throw new IllegalArgumentException("Arquivo a ser criado deve ter tamanho > 0");
+            throw new IllegalArgumentException("Arquivo a ser criado deve ter tamanho > 0");
         }
 
     }
