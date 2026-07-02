@@ -6,6 +6,7 @@ import arquivos.TipoOperacao;
 
 import java.io.File;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Classe principal responsável por despachar e inicializar o pseudo-SO.
@@ -73,14 +74,32 @@ public class Dispatcher {
             }
             // 2. escalonamento
             if (cpu == null) {
-                cpu = filas.buscarProximoProcesso();
-                if (cpu != null) {
-                    cpu.resetarTempoEsperando();
-                    tempoQuantum = 0;
+                // Cria uma lista temporária para salvar quem não conseguiu I/O
+                List<ProcessControlBlock> bloqueadosNesteCiclo = new ArrayList<>();
+                
+                ProcessControlBlock candidato = filas.buscarProximoProcesso();
+                
+                while (candidato != null) {
+                    if (recursos.solicitarRecursos(candidato)) {
+                        cpu = candidato;
+                        cpu.resetarTempoEsperando();
+                        tempoQuantum = 0;
 
-                    if (cpu.getTempoExecutado() == 0) {
-                        imprimirCabecalhoProcesso(cpu);
+                        if (cpu.getTempoExecutado() == 0) {
+                            imprimirCabecalhoProcesso(cpu);
+                        }
+                        break; // Achou um processo apto, sai do loop
+                    } else {
+                        // Não conseguiu recurso. Guarda para devolver à fila depois!
+                        bloqueadosNesteCiclo.add(candidato);
                     }
+                    
+                    candidato = filas.buscarProximoProcesso();
+                }
+                
+                // Devolve todos os processos bloqueados para as filas
+                for (ProcessControlBlock bloqueado : bloqueadosNesteCiclo) {
+                    filas.enfileirarProcesso(bloqueado);
                 }
             }
 
@@ -96,6 +115,7 @@ public class Dispatcher {
                 if (cpu.isConcluido()) {
                     System.out.println("P" + cpu.getId() + " return SIGINT");
                     memoria.liberarMemoria(cpu);
+                    recursos.liberarRecursos(cpu);
                     processos.registrarProcessoConcluido();
                     cpu = null;
 
