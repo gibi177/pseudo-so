@@ -2,6 +2,7 @@ package modulos;
 
 import processos.ProcessControlBlock;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 
 /**
@@ -68,11 +69,11 @@ public class GerenciadorFilas {
      * aplica o aging aos processos que ultrapassaram o limite de tolerância.
      */
     public void aplicarAgingGlobal(int limiteStarvation) {
-        Queue[] filasUsuario = {filaUsuario1, filaUsuario2, filaUsuario3};
+        List<Queue<ProcessControlBlock>> filasUsuario = List.of(filaUsuario1, filaUsuario2, filaUsuario3);
 
-        for (int i = 0; i < filasUsuario.length; i++) {
-            // ... (restante do método permanece idêntico)
-            Queue<ProcessControlBlock> filaAtiva = filasUsuario[i];
+        for (int i = 0; i < filasUsuario.size(); i++) { 
+            
+            Queue<ProcessControlBlock> filaAtiva = filasUsuario.get(i); 
             int tamanhoOriginal = filaAtiva.size();
 
             for (int j = 0; j < tamanhoOriginal; j++) {
@@ -82,7 +83,7 @@ public class GerenciadorFilas {
 
                     if (i > 0 && pcb.getTempoEsperando() >= limiteStarvation) {
                         pcb.resetarTempoEsperando();
-                        pcb.setPrioridadeAtual(pcb.getPrioridadeAtual() - 1); // Promove prioridade [cite: 24]
+                        pcb.setPrioridadeAtual(pcb.getPrioridadeAtual() - 1); // Promove prioridade
                         enfileirarProcesso(pcb); 
                     } else {
                         filaAtiva.add(pcb);

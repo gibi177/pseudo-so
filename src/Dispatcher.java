@@ -113,7 +113,7 @@ public class Dispatcher {
 
                 // término
                 if (cpu.isConcluido()) {
-                    System.out.println("P" + cpu.getId() + " return SIGINT");
+                    System.out.println("P" + cpu.getId() + " return SIGINT\n");
                     memoria.liberarMemoria(cpu);
                     recursos.liberarRecursos(cpu);
                     processos.registrarProcessoConcluido();
@@ -159,20 +159,20 @@ public class Dispatcher {
     }
 
     // ======================================================
-    // SISTEMA DE ARQUIVOS (FASE 6)
+    // SISTEMA DE ARQUIVOS
     // ======================================================
     private void executarSistemaArquivos() {
-        System.out.println("Sistema de arquivos =>");
+        System.out.println("Sistema de arquivos =>\n");
         List<OperacaoArquivo> ops = arquivos.getFilaOperacoes();
         int contador = 1;
 
         for (OperacaoArquivo op : ops) {
-            System.out.println("Operação " + contador + " =>");
+            System.out.print("Operação " + contador + " => ");
             ProcessControlBlock pcb = processos.getProcessoPorId(op.getIdProcesso());
 
             if (pcb == null) {
                 System.out.println("Falha");
-                System.out.println("O processo " + op.getIdProcesso() + " não existe.");
+                System.out.println("O processo " + op.getIdProcesso() + " não existe.\n");
                 contador++;
                 continue;
             }
@@ -186,12 +186,12 @@ public class Dispatcher {
                     System.out.println("Sucesso");
                     System.out.println("O processo " + pcb.getId() + 
                                        " criou o arquivo " + op.getNomeArquivo() + 
-                                       " (" + formatarBlocos(inicioBloco, op.getTamanhoBlocos()) + ").");
+                                       " (" + formatarBlocos(inicioBloco, op.getTamanhoBlocos()) + ").\n");
                 } else {
                     System.out.println("Falha");
                     System.out.println("O processo " + pcb.getId() + 
                                        " não pode criar o arquivo " + op.getNomeArquivo() + 
-                                       " (falta de espaço ou arquivo já existe).");
+                                       " (falta de espaço ou arquivo já existe).\n");
                 }
             } else if (op.getTipoOperacao() == TipoOperacao.DELETAR) {
                 sucesso = arquivos.deletarArquivo(pcb, op.getNomeArquivo());
@@ -199,13 +199,13 @@ public class Dispatcher {
                     System.out.println("Sucesso");
                     System.out.println(
                         "O processo " + pcb.getId()
-                        + " deletou o arquivo " + op.getNomeArquivo() + "."
+                        + " deletou o arquivo " + op.getNomeArquivo() + ".\n"
                     );
                 } else {
                     System.out.println("Falha");
                     System.out.println(
                         "O processo " + pcb.getId()
-                        + " não pode deletar o arquivo " + op.getNomeArquivo() + "."
+                        + " não pode deletar o arquivo " + op.getNomeArquivo() + ".\n"
                     );
                 }
             }
@@ -218,7 +218,7 @@ public class Dispatcher {
     // RELATÓRIO FINAL
     // ======================================================
     private void imprimirRelatorioFinal() {
-        System.out.println("Número de Faltas de Páginas por processo:");
+        System.out.println("\nNúmero de Faltas de Páginas por processo:");
 
         for (int i = 0; i < processos.getTotalProcessos(); i++) {
             ProcessControlBlock p = processos.getProcessoPorId(i);
@@ -230,14 +230,17 @@ public class Dispatcher {
 
     private void imprimirCabecalhoProcesso(ProcessControlBlock pcb) {
         System.out.println("dispatcher =>");
-        System.out.println("PID: " + pcb.getId());
-        System.out.println("frames: " + pcb.getTamanhoWorkingSet());
-        System.out.println("priority: " + pcb.getPrioridadeBase());
-        System.out.println("time: " + pcb.getTempoCpu());
-        System.out.println("printers: " + (pcb.getRequisicaoImpressora() > 0 ? "1" : "0")); 
-        System.out.println("scanners: " + (pcb.getRequisicaoScanner() > 0 ? "1" : "0"));
-        System.out.println("modems: " + (pcb.getRequisicaoModem() > 0 ? "1" : "0"));
-        System.out.println("drives: " + (pcb.getRequisicaoDiscoSata() > 0 ? "1" : "0"));
+
+        System.out.println("\tPID: " + pcb.getId());
+        System.out.println("\tframes: " + pcb.getTamanhoWorkingSet());
+        System.out.println("\tpriority: " + pcb.getPrioridadeBase());
+        System.out.println("\ttime: " + pcb.getTempoCpu());
+
+        System.out.println("\tprinters: " + (pcb.getRequisicaoImpressora() > 0 ? "1" : "0"));
+        System.out.println("\tscanners: " + (pcb.getRequisicaoScanner() > 0 ? "1" : "0"));
+        System.out.println("\tmodems: " + (pcb.getRequisicaoModem() > 0 ? "1" : "0"));
+        System.out.println("\tdrives: " + (pcb.getRequisicaoDiscoSata() > 0 ? "1" : "0") + "\n");
+
         System.out.println("process " + pcb.getId() + " =>");
         System.out.println("P" + pcb.getId() + " STARTED");
     }

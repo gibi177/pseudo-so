@@ -85,7 +85,6 @@ public class GerenciadorArquivos {
     // DELETE
     // ======================================================
     public boolean deletarArquivo(ProcessControlBlock pcb, String nomeArquivo) {
-
         if (disco == null) {
             return false;
         }
@@ -119,22 +118,18 @@ public class GerenciadorArquivos {
     // FIRST-FIT CONTÍGUO (SAFE)
     // ======================================================
     private int buscarFirstFit(int tamanho) {
-
         int contador = 0;
 
         for (int i = 0; i < disco.length; i++) {
-
             if ("0".equals(disco[i])) {
                 contador++;
             } else {
                 contador = 0;
             }
-
             if (contador == tamanho) {
                 return i - tamanho + 1;
             }
         }
-
         return -1;
     }
 

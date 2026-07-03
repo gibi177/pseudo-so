@@ -3,7 +3,6 @@ package processos;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -13,7 +12,7 @@ import java.util.Optional;
  */
 public class ProcessControlBlock {
 
-    // --- Atributos de Entrada Estáticos (lidos do arquivo processes.txt) ---
+    // Atributos de Entrada Estáticos (lidos do arquivo processes.txt)
     private final int id; // Deve iniciar em 0 e ir até a quantidade de processos - 1
     private final int tempoInicializacao;
     private final int prioridadeBase;
@@ -24,14 +23,14 @@ public class ProcessControlBlock {
     private final int requisicaoModem;
     private final int requisicaoDiscoSata;
 
-    // --- Atributos de Estado Interno e Controle Dinâmico ---
+    // Atributos de Estado Interno e Controle Dinâmico
     private EstadoProcesso estadoAtual;
     private int prioridadeAtual; // Manipulada pelo escalonador (aging/realimentação)
     private int pageFaults;
     private int tempoExecutado; // Quantidade de ciclos de CPU já consumidos
     private int tempoEsperando; // Rastreia starvation: tempo contínuo aguardando na fila
 
-    // --- Rastreamento de Referências de Memória (lidos do arquivo string.txt) ---
+    // Rastreamento de Referências de Memória (lidos do arquivo string.txt)
     private List<Integer> referenciasMemoria;
     private int programCounterMemoria; // Ponteiro que rastreia qual instrução/página deve ser lida
 
@@ -64,8 +63,7 @@ public class ProcessControlBlock {
         this.tempoEsperando = 0;
     }
 
-    // --- Getters ---
-    
+    // Getters
     public int getId() { return id; }
     public int getTempoInicializacao() { return tempoInicializacao; }
     public int getPrioridadeBase() { return prioridadeBase; }
@@ -82,16 +80,9 @@ public class ProcessControlBlock {
     public int getPageFaults() { return pageFaults; }
     public int getTempoExecutado() { return tempoExecutado; }
     public int getProgramCounterMemoria() { return programCounterMemoria; }
+    public List<Integer> getReferenciasMemoria() { return Collections.unmodifiableList(referenciasMemoria); }
 
-    /**
-     * Retorna uma visualização imutável da lista de referências.
-     * Previne que o estado interno seja modificado fora da classe (Fuga de Referência).
-     */
-    public List<Integer> getReferenciasMemoria() { 
-        return Collections.unmodifiableList(referenciasMemoria); 
-    }
-
-    // --- Setters e Modificadores Dinâmicos de Estado ---
+    // Setters e Modificadores Dinâmicos de Estado
 
     public void setEstadoAtual(EstadoProcesso estadoAtual) {
         this.estadoAtual = estadoAtual;
@@ -147,20 +138,5 @@ public class ProcessControlBlock {
      */
     public boolean isConcluido() {
         return this.tempoExecutado >= this.tempoCpu;
-    }
-
-    // --- Identidade do Objeto ---
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ProcessControlBlock that = (ProcessControlBlock) o;
-        return id == that.id;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
     }
 }
