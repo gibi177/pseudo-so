@@ -1,12 +1,11 @@
+import arquivos.OperacaoArquivo;
+import arquivos.TipoOperacao;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import modulos.*;
 import processos.*;
 import util.LeitorEntrada;
-import arquivos.OperacaoArquivo;
-import arquivos.TipoOperacao;
-
-import java.io.File;
-import java.util.List;
-import java.util.ArrayList;
 
 /**
  * Classe principal responsável por despachar e inicializar o pseudo-SO.
@@ -32,7 +31,7 @@ public class Dispatcher {
 
     public static void main(String[] args) {
         if (args.length != 3) {
-            System.err.println("Uso: ./dispatcher <processes.txt> <files.txt> <string.txt>");
+            System.err.println("Uso: ./dispatcher processes.txt files.txt string.txt");
             System.exit(1);
         }
 
@@ -113,7 +112,7 @@ public class Dispatcher {
 
                 // término
                 if (cpu.isConcluido()) {
-                    System.out.println("P" + cpu.getId() + " return SIGINT\n");
+                    System.out.println("P" + cpu.getId() + " return SIGINT");
                     memoria.liberarMemoria(cpu);
                     recursos.liberarRecursos(cpu);
                     processos.registrarProcessoConcluido();
@@ -153,7 +152,7 @@ public class Dispatcher {
         int fim = Math.min(inicio + paginasPorTick, refs.size());
 
         for (int i = inicio; i < fim; i++) {
-            memoria.acessarPagina(pcb, refs.get(i));
+            memoria.acessarPagina(pcb, refs.get(i)); 
             pcb.avancarProgramCounterMemoria();
         }
     }
@@ -162,7 +161,7 @@ public class Dispatcher {
     // SISTEMA DE ARQUIVOS
     // ======================================================
     private void executarSistemaArquivos() {
-        System.out.println("Sistema de arquivos =>\n");
+        System.out.println("\nSistema de arquivos =>\n");
         List<OperacaoArquivo> ops = arquivos.getFilaOperacoes();
         int contador = 1;
 
@@ -229,7 +228,7 @@ public class Dispatcher {
     }
 
     private void imprimirCabecalhoProcesso(ProcessControlBlock pcb) {
-        System.out.println("dispatcher =>");
+        System.out.println("\ndispatcher =>");
 
         System.out.println("\tPID: " + pcb.getId());
         System.out.println("\tframes: " + pcb.getTamanhoWorkingSet());

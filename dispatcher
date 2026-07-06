@@ -1,9 +1,9 @@
 #!/bin/bash
-# Wrapper para executar o pseudo-SO conforme a especificacao
+# Wrapper para executar o pseudo-SO
 
 # Verifica se a pasta out existe e se a classe foi compilada
 if [ ! -d "out" ]; then
-  echo "Erro: O projeto ainda não foi compilado. Rode 'make' ou './build.sh' primeiro."
+  echo "Erro: O projeto ainda não foi compilado. Rode 'make' primeiro."
   exit 1
 fi
 

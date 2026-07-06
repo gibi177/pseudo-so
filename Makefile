@@ -26,8 +26,3 @@ clean:
 	@echo "Limpando diretório de saída..."
 	rm -rf $(OUT_DIR)
 	@echo "Limpeza concluída."
-
-# Executa o programa (exemplo genérico, precisará dos argumentos reais depois)
-run: compile
-	@echo "Executando o Dispatcher..."
-	$(JAVA) -cp $(OUT_DIR) Dispatcher

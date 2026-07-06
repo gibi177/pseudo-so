@@ -1,9 +1,9 @@
 package modulos;
 
-import processos.ProcessControlBlock;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import processos.ProcessControlBlock;
 
 /**
  * Mantém as interfaces e funções que operam sobre os processos, 
@@ -38,7 +38,6 @@ public class GerenciadorFilas {
             return;
         }
 
-        // Aplicação do padrão Fail-Fast para evitar o Paradoxo do Processo Zumbi
         if (getTotalProcessosEnfileirados() >= CAPACIDADE_MAXIMA) {
             throw new IllegalStateException("Falha crítica: Limite arquitetural de " + CAPACIDADE_MAXIMA + 
                                             " processos nas filas atingido. O SO não pode despachar o PID " + pcb.getId() + ".");
