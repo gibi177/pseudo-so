@@ -9,3 +9,5 @@ fi
 
 # Repassa todos os argumentos passados via terminal ("$@") diretamente para a classe Java
 java -cp out Dispatcher "$@"
+
+# OBS: Para executar, use: ./dispatcher processes.txt files.txt string.txt

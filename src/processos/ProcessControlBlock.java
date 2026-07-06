@@ -8,7 +8,6 @@ import java.util.Optional;
 /**
  * PCB (Process Control Block).
  * Mantém todas as informações específicas e o estado atual de um processo.
- * Atualizado com cópias defensivas e identidade imutável baseada no ID.
  */
 public class ProcessControlBlock {
 
