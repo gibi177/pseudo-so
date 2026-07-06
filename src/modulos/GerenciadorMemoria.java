@@ -58,16 +58,10 @@ public class GerenciadorMemoria {
         // MISS
         pcb.registrarPageFault();
     
-        boolean isParticaoGlobalCheia =
-                (prioridade == 0 && calcularOcupacaoGlobal(0) >= MAX_FRAMES_TR) ||
-                (prioridade > 0 && calcularOcupacaoGlobal(1) >= MAX_FRAMES_USER);
-    
-        if (framesLocais.size() >= pcb.getTamanhoWorkingSet() || isParticaoGlobalCheia) {
-            if (!framesLocais.isEmpty()) {
-                framesLocais.removeFirst();
-            }
+        if (framesLocais.size() >= pcb.getTamanhoWorkingSet()) {
+            framesLocais.removeFirst();
         }
-    
+        
         framesLocais.addLast(idPagina);
     }
 
