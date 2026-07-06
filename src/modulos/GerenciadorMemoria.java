@@ -35,43 +35,39 @@ public class GerenciadorMemoria {
     public void acessarPagina(ProcessControlBlock pcb, int idPagina) {
         int pid = pcb.getId();
         int prioridade = pcb.getPrioridadeBase();
-        
+    
         alocacaoPorProcesso.putIfAbsent(pid, new LinkedList<>());
         prioridadePorProcesso.putIfAbsent(pid, prioridade);
-        
+    
         LinkedList<Integer> framesLocais = alocacaoPorProcesso.get(pid);
-
-        // Regra da Pré-carga: A primeira página é alocada na partição sem gerar fault.
-        // Se a partição estiver cheia neste momento, forçará a quebra temporária do 
-        // limite, já que o escopo LRU é estritamente local e a lista do processo está vazia.
+    
+        // PRÉ-CARGA (sem fault)
         if (!preCargaRealizada.contains(pid)) {
             framesLocais.add(idPagina);
             preCargaRealizada.add(pid);
             return;
         }
-
-        // Lógica de HIT (Página já está na RAM)
+    
+        // HIT
         if (framesLocais.contains(idPagina)) {
             framesLocais.remove((Integer) idPagina);
             framesLocais.addLast(idPagina);
             return;
         }
-
-        // Lógica de MISS (Page Fault)
+    
+        // MISS
         pcb.registrarPageFault();
-
-        // Estado Derivado: Calcula sob demanda para evitar corrupção de contadores
-        boolean isParticaoGlobalCheia = (prioridade == 0 && calcularOcupacaoGlobal(0) >= MAX_FRAMES_TR) ||
-                                        (prioridade > 0 && calcularOcupacaoGlobal(1) >= MAX_FRAMES_USER);
-
-        // Verifica limite do Working Set local OU exaustão da partição física global
+    
+        boolean isParticaoGlobalCheia =
+                (prioridade == 0 && calcularOcupacaoGlobal(0) >= MAX_FRAMES_TR) ||
+                (prioridade > 0 && calcularOcupacaoGlobal(1) >= MAX_FRAMES_USER);
+    
         if (framesLocais.size() >= pcb.getTamanhoWorkingSet() || isParticaoGlobalCheia) {
-            // Evicção LRU local: Remove a página no início da lista
             if (!framesLocais.isEmpty()) {
                 framesLocais.removeFirst();
             }
-        } 
-
+        }
+    
         framesLocais.addLast(idPagina);
     }
 
