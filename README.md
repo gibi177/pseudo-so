@@ -332,7 +332,7 @@ ou:
 Após compilação:
 
 ``` bash
-java Dispatcher
+./dispatcher processes.txt files.txt string.txt
 ```
 
 O sistema iniciará a simulação e exibirá:
