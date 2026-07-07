@@ -103,31 +103,22 @@ public class GerenciadorArquivos {
     // DELETE
     // ======================================================
     public boolean deletarArquivo(ProcessControlBlock pcb, String nomeArquivo) {
-        if (disco == null) {
-            return false;
-        }
-
-        // Arquivo não existe
-        if (!metadadosAutoria.containsKey(nomeArquivo)) {
-            return false;
-        }
+        if (disco == null) return false;
+        if (!metadadosAutoria.containsKey(nomeArquivo)) return false;
 
         int autor = metadadosAutoria.get(nomeArquivo);
         boolean ehTempoReal = pcb.getPrioridadeBase() == 0;
+        boolean ehArquivoDeSistema = (autor == AUTORIA_SISTEMA);
 
-        // Regra de permissão
-        if (!ehTempoReal && autor != pcb.getId()) {
+        if (!ehArquivoDeSistema && !ehTempoReal && autor != pcb.getId()) {
             return false;
         }
 
-        // Remover do disco
         for (int i = 0; i < disco.length; i++) {
             if (nomeArquivo.equals(disco[i])) {
                 disco[i] = "0";
             }
         }
-
-        // Remover metadado
         metadadosAutoria.remove(nomeArquivo);
         return true;
     }
