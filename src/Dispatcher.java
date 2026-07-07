@@ -179,18 +179,35 @@ public class Dispatcher {
             boolean sucesso;
 
             if (op.getTipoOperacao() == TipoOperacao.CRIAR) {
-                int inicioBloco = arquivos.criarArquivo(pcb, op.getNomeArquivo(), op.getTamanhoBlocos());
+                GerenciadorArquivos.ResultadoOperacaoArquivo resultado = arquivos.criarArquivo(pcb, op.getNomeArquivo(), op.getTamanhoBlocos());
 
-                if (inicioBloco != -1) {
-                    System.out.println("Sucesso");
-                    System.out.println("O processo " + pcb.getId() + 
-                                       " criou o arquivo " + op.getNomeArquivo() + 
-                                       " (" + formatarBlocos(inicioBloco, op.getTamanhoBlocos()) + ").\n");
-                } else {
-                    System.out.println("Falha");
-                    System.out.println("O processo " + pcb.getId() + 
-                                       " não pode criar o arquivo " + op.getNomeArquivo() + 
-                                       " (falta de espaço ou arquivo já existe).\n");
+                switch (resultado) {
+                    case SUCESSO:
+                        System.out.println("Sucesso");
+                        System.out.println("O processo " + pcb.getId() + 
+                                        " criou o arquivo " + op.getNomeArquivo() + ".\n");
+                        break;
+
+                    case SEM_ESPACO:
+                        System.out.println("Falha");
+                        System.out.println("O processo " + pcb.getId() + 
+                                        " não pode criar o arquivo " + op.getNomeArquivo() + 
+                                        " (falta de espaço).\n");
+                        break;
+
+                    case JA_EXISTE:
+                        System.out.println("Falha");
+                        System.out.println("O processo " + pcb.getId() + 
+                                        " não pode criar o arquivo " + op.getNomeArquivo() + 
+                                        " (arquivo já existe).\n");
+                        break;
+
+                    case PROCESSO_INVALIDO:
+                        System.out.println("Falha");
+                        System.out.println("O processo " + pcb.getId() + 
+                                        " não pode criar o arquivo " + op.getNomeArquivo() + 
+                                        " (processo inválido).\n");
+                        break;
                 }
             } else if (op.getTipoOperacao() == TipoOperacao.DELETAR) {
                 sucesso = arquivos.deletarArquivo(pcb, op.getNomeArquivo());
