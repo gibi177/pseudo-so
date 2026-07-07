@@ -32,6 +32,13 @@ public class GerenciadorArquivos {
         Arrays.fill(this.disco, "0");
     }
 
+    public enum ResultadoOperacaoArquivo {
+        SUCESSO,
+        SEM_ESPACO,
+        JA_EXISTE,
+        PROCESSO_INVALIDO
+    }
+
     public void registrarBlocoOcupadoInicial(String nomeArquivo, int indiceInicial, int tamanho, int idAutor) {
         if (indiceInicial + tamanho > disco.length) {
             throw new IllegalArgumentException(
@@ -60,25 +67,36 @@ public class GerenciadorArquivos {
         return Collections.unmodifiableList(filaOperacoes);
     }
 
+    
+
     // ======================================================
     // CREATE (FIRST-FIT CONTÍGUO)
     // ======================================================
-    public int criarArquivo(ProcessControlBlock pcb, String nomeArquivo, int tamanhoBlocos) {
-        if (disco == null || tamanhoBlocos <= 0)
-            return -1;
-        if (metadadosAutoria.containsKey(nomeArquivo))
-            return -1;
+    public ResultadoOperacaoArquivo criarArquivo(ProcessControlBlock pcb, String nomeArquivo, int tamanhoBlocos) {
+        // Arquivo já existe
+        if (metadadosAutoria.containsKey(nomeArquivo)) {
+            return ResultadoOperacaoArquivo.JA_EXISTE;
+        }
 
+        // Buscar espaço (First-Fit)
         int inicio = buscarFirstFit(tamanhoBlocos);
-        if (inicio == -1)
-            return -1;
 
+        if (inicio == -1) {
+            return ResultadoOperacaoArquivo.SEM_ESPACO;
+        }
+
+        if (pcb == null || nomeArquivo == null || nomeArquivo.isEmpty()) {
+            return ResultadoOperacaoArquivo.PROCESSO_INVALIDO;
+        }
+
+        // Criar arquivo
         for (int i = inicio; i < inicio + tamanhoBlocos; i++) {
             disco[i] = nomeArquivo;
         }
 
         metadadosAutoria.put(nomeArquivo, pcb.getId());
-        return inicio; // Retorna o bloco inicial em vez de "true"
+
+        return ResultadoOperacaoArquivo.SUCESSO;
     }
 
     // ======================================================
